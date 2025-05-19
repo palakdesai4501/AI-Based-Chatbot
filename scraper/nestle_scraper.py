@@ -62,94 +62,94 @@ def extract_page_content(soup: BeautifulSoup, url: str) -> Dict[str, Any]:
     Args:
         soup: BeautifulSoup object of the page
         url: Source URL of the page
-        
+    
     Returns:
         Dict containing structured data from the page
     """
-    # Extract all required content
+        # Extract all required content
     data = {
-        "headings": [],
-        "paragraphs": [],
+            "headings": [],
+            "paragraphs": [],
         "list_items": [],
-        "links": [],
-        "images": [],
-        "tables": []
-    }
-    
-    # Extract headings (h1, h2, h3, h4)
+            "links": [],
+            "images": [],
+            "tables": []
+        }
+        
+        # Extract headings (h1, h2, h3, h4)
     for tag in ['h1', 'h2', 'h3', 'h4']:
-        for element in soup.find_all(tag):
-            if element.text.strip():
-                data["headings"].append({
-                    "type": tag,
+            for element in soup.find_all(tag):
+                if element.text.strip():
+                    data["headings"].append({
+                        "type": tag,
                     "text": element.text.strip(),
                     "source_page": url
-                })
-    
-    # Extract paragraphs
+                    })
+        
+        # Extract paragraphs
     for p in soup.find_all('p'):
         if p.text.strip():
             data["paragraphs"].append({
                 "text": p.text.strip(),
                 "source_page": url
             })
-    
-    # Extract list items
+        
+        # Extract list items
     for li in soup.find_all('li'):
         if li.text.strip():
             data["list_items"].append({
                 "text": li.text.strip(),
                 "source_page": url
             })
-    
-    # Extract links
-    for a in soup.find_all('a'):
-        href = a.get('href')
-        text = a.text.strip()
-        if href and text:
-            # Make relative URLs absolute
-            if href.startswith('/'):
-                href = f"https://www.madewithnestle.ca{href}"
-            data["links"].append({
-                "text": text,
+        
+        # Extract links
+        for a in soup.find_all('a'):
+            href = a.get('href')
+            text = a.text.strip()
+            if href and text:
+                # Make relative URLs absolute
+                if href.startswith('/'):
+                    href = f"https://www.madewithnestle.ca{href}"
+                data["links"].append({
+                    "text": text,
                 "href": href,
                 "source_page": url
-            })
-    
-    # Extract images
-    for img in soup.find_all('img'):
-        alt = img.get('alt', '')
-        src = img.get('src', '')
-        if src:
-            # Make relative URLs absolute
-            if src.startswith('/'):
-                src = f"https://www.madewithnestle.ca{src}"
-            data["images"].append({
-                "alt": alt,
+                })
+        
+        # Extract images
+        for img in soup.find_all('img'):
+            alt = img.get('alt', '')
+            src = img.get('src', '')
+            if src:
+                # Make relative URLs absolute
+                if src.startswith('/'):
+                    src = f"https://www.madewithnestle.ca{src}"
+                data["images"].append({
+                    "alt": alt,
                 "src": src,
                 "source_page": url
-            })
-    
-    # Extract tables
-    for table in soup.find_all('table'):
-        table_data = {"headers": [], "rows": [], "source_page": url}
+                })
         
-        # Extract headers
-        for th in table.find_all('th'):
-            table_data["headers"].append(th.text.strip())
+        # Extract tables
+        for table in soup.find_all('table'):
+            table_data = {"headers": [], "rows": [], "source_page": url}
+            
+            # Extract headers
+            for th in table.find_all('th'):
+                table_data["headers"].append(th.text.strip())
+            
+            # Extract rows
+            for tr in table.find_all('tr'):
+                row = []
+                for td in tr.find_all('td'):
+                    row.append(td.text.strip())
+                if row:  # Only add non-empty rows
+                    table_data["rows"].append(row)
+            
+            if table_data["headers"] or table_data["rows"]:
+                data["tables"].append(table_data)
         
-        # Extract rows
-        for tr in table.find_all('tr'):
-            row = []
-            for td in tr.find_all('td'):
-                row.append(td.text.strip())
-            if row:  # Only add non-empty rows
-                table_data["rows"].append(row)
-        
-        if table_data["headers"] or table_data["rows"]:
-            data["tables"].append(table_data)
-    
-    return data
+        return data
 
 def extract_internal_links(soup: BeautifulSoup, base_url: str) -> Set[str]:
     """
