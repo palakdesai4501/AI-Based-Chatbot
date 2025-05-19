@@ -19,7 +19,6 @@ class Neo4jGraphBuilder:
         self.uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
         self.user = os.getenv("NEO4J_USER", "neo4j")
         self.password = os.getenv("NEO4J_PASSWORD", "password")
-        print("Loaded Neo4j password:", repr(self.password))
         
         # Initialize driver
         self.driver = None
@@ -31,8 +30,8 @@ class Neo4jGraphBuilder:
             # Verify connection
             with self.driver.session() as session:
                 result = session.run("RETURN 1 as n")
-                logger.info("Successfully connected to Neo4j")
-                return True
+            logger.info("Successfully connected to Neo4j")
+            return True
         except Exception as e:
             logger.error(f"Failed to connect to Neo4j: {e}")
             return False
@@ -96,42 +95,57 @@ class Neo4jGraphBuilder:
                         if cell_text and len(cell_text) > 2:
                             entities['ingredients'].append(cell_text)
 
+        logger.info(f"Entity extraction summary: {len(entities['recipes'])} recipes, {len(entities['ingredients'])} ingredients, {len(entities['categories'])} categories.")
         return entities
 
     def create_graph(self, data_file: str):
         """Create the graph from the data file"""
         try:
             # Load data
+            logger.info(f"Loading data from: {data_file}")
+            if not os.path.exists(data_file):
+                logger.error(f"Data file not found: {data_file}")
+                return
+                
             with open(data_file, 'r') as f:
                 data = json.load(f)
+            logger.info(f"Data file loaded. Keys: {list(data.keys())}")
 
             # Extract entities
+            logger.info("Extracting entities from data...")
             entities = self.extract_entities(data)
 
             # Create nodes and relationships
             with self.driver.session() as session:
                 # Create recipes
+                logger.info("Creating recipe nodes...")
                 for recipe in entities['recipes']:
                     session.run(
                         "MERGE (r:Recipe {name: $name})",
                         name=recipe
                     )
+                logger.info(f"Created {len(entities['recipes'])} recipe nodes")
 
                 # Create categories
+                logger.info("Creating category nodes...")
                 for category in entities['categories']:
                     session.run(
                         "MERGE (c:Category {name: $name})",
                         name=category
                     )
+                logger.info(f"Created {len(entities['categories'])} category nodes")
 
                 # Create ingredients and relationships
+                logger.info("Creating ingredient nodes...")
                 for ingredient in entities['ingredients']:
                     session.run(
                         "MERGE (i:Ingredient {name: $name})",
                         name=ingredient
                     )
+                logger.info(f"Created {len(entities['ingredients'])} ingredient nodes")
 
                 # Create relationships between recipes and ingredients
+                logger.info("Creating recipe-ingredient relationships...")
                 for recipe in entities['recipes']:
                     for ingredient in entities['ingredients']:
                         session.run(
@@ -145,6 +159,7 @@ class Neo4jGraphBuilder:
                         )
 
                 # Create relationships between recipes and categories
+                logger.info("Creating recipe-category relationships...")
                 for recipe in entities['recipes']:
                     for category in entities['categories']:
                         session.run(
@@ -161,6 +176,7 @@ class Neo4jGraphBuilder:
 
         except Exception as e:
             logger.error(f"Error creating graph: {e}")
+            raise  # Re-raise the exception to see the full traceback
 
 def main():
     # Initialize graph builder
@@ -176,8 +192,12 @@ def main():
         graph_builder.clear_database()
         
         # Create graph from data
-        graph_builder.create_graph("/Users/palakdesai/Downloads/ChatBot/scraper/nestle_full_data.json")
+        data_file = "/Users/palakdesai/Downloads/ChatBot/scraper/nestle_full_data.json"
+        logger.info(f"Starting graph creation from {data_file}")
+        graph_builder.create_graph(data_file)
         
+    except Exception as e:
+        logger.error(f"Error in main: {e}")
     finally:
         # Close connection
         graph_builder.close()
