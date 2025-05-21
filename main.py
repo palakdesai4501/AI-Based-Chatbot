@@ -9,6 +9,7 @@ from langchain_openai import ChatOpenAI
 from neo4j import GraphDatabase
 from typing import List, Dict, Any
 import re
+from fastapi.middleware.cors import CORSMiddleware
 
 # Load .env variables 
 load_dotenv()
@@ -35,6 +36,15 @@ logger = logging.getLogger("chat_api")
 
 # FastAPI app
 app = FastAPI()
+
+# Add CORS middleware to allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or ["http://localhost:8080"] for more security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Request schema
 class AskRequest(BaseModel):
