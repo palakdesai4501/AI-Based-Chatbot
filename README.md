@@ -19,7 +19,7 @@ An intelligent chatbot that helps users find recipes and information from the Ma
 - **Embeddings**: Google Vertex AI
 - **LLM**: OpenAI GPT-3.5 Turbo
 - **Data Processing**: Python
-- **API Documentation**: Swagger UI
+- **API Testing**: Postman
 
 ## Prerequisites
 
@@ -28,6 +28,7 @@ An intelligent chatbot that helps users find recipes and information from the Ma
 - Google Cloud Account (for Vertex AI)
 - OpenAI API Key
 - Git
+- Postman (for API testing)
 
 ## Setup Instructions
 
@@ -75,9 +76,15 @@ An intelligent chatbot that helps users find recipes and information from the Ma
    uvicorn main:app --reload --port 8001
    ```
 
-8. **Access the API**
-   - API Documentation: http://localhost:8001/docs
-   - Test the chatbot: http://localhost:8001/ask
+8. **Test the API**
+   - Import the provided Postman collection
+   - Test the chatbot endpoint: POST http://localhost:8001/ask
+   - Example request body:
+   ```json
+   {
+     "question": "What recipes use chocolate?"
+   }
+   ```
 
 ## Project Structure
 
@@ -119,16 +126,15 @@ ChatBot/
 
 ## Testing
 
-1. **Local Testing**
+1. **Postman Collection**
+   - Import the provided Postman collection
+   - Test all endpoints
+   - Example request:
    ```bash
    curl -X POST http://localhost:8001/ask \
      -H "Content-Type: application/json" \
      -d '{"question": "What recipes use chocolate?"}'
    ```
-
-2. **Postman Collection**
-   - Import the provided Postman collection
-   - Test all endpoints
 
 ## Deployment
 
