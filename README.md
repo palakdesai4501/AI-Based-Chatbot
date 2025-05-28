@@ -141,10 +141,6 @@ ChatBot/
      -d '{"question": "What recipes use chocolate?"}'
    ```
 
-## Deployment
-
-The application is deployed on Azure and can be accessed at: [Your Azure Deployment URL]
-
 ## Contributing
 
 1. Fork the repository
