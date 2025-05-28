@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smartie Chatbot</title>
+  <link rel="icon" href="assets/bot-icon.png">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: url('assets/background.png') no-repeat center center fixed;
+      background-size: cover;
+      min-height: 100vh;
+    }
+    /* Chatbot Floating Icon */
+    #chatbot-icon {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      width: 64px;
+      height: 64px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1001;
+      transition: box-shadow 0.2s;
+    }
+    #chatbot-icon:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+    }
+    #chatbot-icon img {
+      width: 36px;
+      height: 36px;
+    }
+    /* Chatbot Window */
+    #chatbot-window {
+      position: fixed;
+      bottom: 110px;
+      right: 32px;
+      width: 370px;
+      max-width: 95vw;
+      height: 500px;
+      max-height: 80vh;
+      background: #f9fafd;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 1002;
+      transition: opacity 0.2s, transform 0.2s;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(30px);
+    }
+    #chatbot-window.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    /* Header */
+    #chatbot-header {
+      background: #1a237e;
+      color: #fff;
+      padding: 18px 20px 14px 20px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #chatbot-header .bot-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #chatbot-header .close-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 0 2px;
+      transition: color 0.2s;
+    }
+    #chatbot-header .close-btn:hover {
+      color: #ffb300;
+    }
+    /* Messages */
+    #chatbot-messages {
+      flex: 1;
+      padding: 18px 16px 8px 16px;
+      overflow-y: auto;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .message {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 1rem;
+      line-height: 1.5;
+      word-break: break-word;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .message.user {
+      align-self: flex-end;
+      background: #e3e7fd;
+      color: #1a237e;
+      border-bottom-right-radius: 4px;
+    }
+    .message.bot {
+      align-self: flex-start;
+      background: #fff;
+      color: #222;
+      border-bottom-left-radius: 4px;
+    }
+    /* Input Area */
+    #chatbot-input-area {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px 12px 14px;
+      background: #f1f3fa;
+      border-top: 1px solid #e0e3ef;
+    }
+    #chatbot-input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #cfd8dc;
+      font-size: 1rem;
+      outline: none;
+      background: #fff;
+      margin-right: 10px;
+      transition: border 0.2s;
+    }
+    #chatbot-input:focus {
+      border: 1.5px solid #1a237e;
+    }
+    #chatbot-send {
+      background: #1a237e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #chatbot-send:disabled {
+      background: #b0b6d6;
+      cursor: not-allowed;
+    }
+    #chatbot-send:hover:not(:disabled) {
+      background: #3949ab;
+    }
+    @media (max-width: 600px) {
+      #chatbot-window {
+        width: 98vw;
+        right: 1vw;
+        height: 70vh;
+        bottom: 90px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Floating Chatbot Icon -->
+  <div id="chatbot-icon" title="Chat with Smartie">
+    <img src="assets/bot-icon.png" alt="Chatbot Icon">
+  </div>
+
+  <!-- Chatbot Window -->
+  <div id="chatbot-window">
+    <div id="chatbot-header">
+      <span class="bot-name">
+        <img src="assets/bot-icon.png" alt="Bot" style="width:28px;height:28px;border-radius:50%;background:#fff;margin-right:6px;">
+        Smartie
+      </span>
+      <button class="close-btn" id="chatbot-close">&times;</button>
+    </div>
+    <div id="chatbot-messages">
+      <div class="message bot">Hey! I'm <b>Smartie</b>, your personal MadeWithNestlé assistant.<br>Ask me anything, and I'll quickly search the entire site to find the answers you need!</div>
+    </div>
+    <form id="chatbot-input-area" autocomplete="off">
+      <input id="chatbot-input" type="text" placeholder="Ask me anything..." required autocomplete="off" />
+      <button id="chatbot-send" type="submit">Send</button>
+    </form>
+  </div>
+
+  <script>
+    // Elements
+    const chatbotIcon = document.getElementById('chatbot-icon');
+    const chatbotWindow = document.getElementById('chatbot-window');
+    const chatbotClose = document.getElementById('chatbot-close');
+    const chatbotMessages = document.getElementById('chatbot-messages');
+    const chatbotInput = document.getElementById('chatbot-input');
+    const chatbotForm = document.getElementById('chatbot-input-area');
+    const chatbotSend = document.getElementById('chatbot-send');
+
+    // Open/close logic
+    chatbotIcon.onclick = () => {
+      chatbotWindow.classList.add('open');
+      chatbotInput.focus();
+    };
+    chatbotClose.onclick = () => {
+      chatbotWindow.classList.remove('open');
+    };
+
+    // Send message
+    chatbotForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const question = chatbotInput.value.trim();
+      if (!question) return;
+      addMessage(question, 'user');
+      chatbotInput.value = '';
+      chatbotSend.disabled = true;
+      try {
+        const response = await fetch('http://localhost:8001/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+        const data = await response.json();
+        if (data.answer) {
+          addMessage(data.answer, 'bot');
+        } else if (data.error) {
+          addMessage('Sorry, there was an error: ' + data.error, 'bot');
+        } else {
+          addMessage('Sorry, I could not understand the response.', 'bot');
+        }
+      } catch (err) {
+        addMessage('Sorry, I could not connect to the server.', 'bot');
+      }
+      chatbotSend.disabled = false;
+    };
+
+    // Add message to chat
+    function addMessage(text, sender) {
+      const msg = document.createElement('div');
+      msg.className = 'message ' + sender;
+      msg.innerHTML = text.replace(/\n/g, '<br>');
+      chatbotMessages.appendChild(msg);
+      chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
+  </script>
+</body>
+</html> 
