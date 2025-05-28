@@ -153,10 +153,3 @@ The application is deployed on Azure and can be accessed at: [Your Azure Deploym
 4. Push to the branch
 5. Create a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contact
-
-For any queries, please contact: [Your Contact Information]
