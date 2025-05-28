@@ -36,7 +36,7 @@ if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
     logger.warning("GOOGLE_APPLICATION_CREDENTIALS environment variable not set!")
     logger.warning("Follow setup instructions for Google Vertex AI authentication")
 
-def load_nestle_data(file_path: str) -> Dict[str, Any]:
+def load_nestle_data(file_path: str) -> List[Dict[str, Any]]:
     """
     Load the Nestle scraped data from JSON file.
     
@@ -44,24 +44,24 @@ def load_nestle_data(file_path: str) -> Dict[str, Any]:
         file_path: Path to the JSON file
         
     Returns:
-        Dictionary containing the scraped data
+        List of page blocks containing the scraped data
     """
     logger.info(f"Loading data from {file_path}")
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        logger.info(f"Successfully loaded data: {len(data.keys())} categories found")
+        logger.info(f"Successfully loaded data: {len(data)} pages found")
         return data
     except Exception as e:
         logger.error(f"Error loading data: {e}")
         raise
 
-def extract_text_with_metadata(data: Dict[str, Any]) -> List[Document]:
+def extract_text_with_metadata(data: List[Dict[str, Any]]) -> List[Document]:
     """
-    Combine text content from different categories and maintain source metadata.
+    Extract text content from page blocks and maintain source metadata.
     
     Args:
-        data: Dictionary containing the scraped data
+        data: List of page blocks containing the scraped data
         
     Returns:
         List of LangChain Document objects with text and metadata
@@ -69,44 +69,47 @@ def extract_text_with_metadata(data: Dict[str, Any]) -> List[Document]:
     logger.info("Extracting text and metadata from scraped data")
     documents = []
     
-    # Process headings
-    for heading in data.get("headings", []):
-        doc = Document(
-            page_content=f"{heading['type']}: {heading['text']}",
-            metadata={"source": heading["source_page"], "type": "heading"}
-        )
-        documents.append(doc)
-    
-    # Process paragraphs
-    for paragraph in data.get("paragraphs", []):
-        doc = Document(
-            page_content=paragraph["text"],
-            metadata={"source": paragraph["source_page"], "type": "paragraph"}
-        )
-        documents.append(doc)
-    
-    # Process list items
-    for item in data.get("list_items", []):
-        doc = Document(
-            page_content=item["text"],
-            metadata={"source": item["source_page"], "type": "list_item"}
-        )
-        documents.append(doc)
-    
-    # Process tables - convert to text representation
-    for table in data.get("tables", []):
-        table_text = ""
-        if table["headers"]:
-            table_text += "Headers: " + " | ".join(table["headers"]) + "\n"
-        for row in table["rows"]:
-            table_text += "Row: " + " | ".join(row) + "\n"
+    for page in data:
+        url = page.get("url", "unknown")
         
-        if table_text:
+        # Process headings
+        for heading in page.get("headings", []):
             doc = Document(
-                page_content=table_text,
-                metadata={"source": table["source_page"], "type": "table"}
+                page_content=f"{heading['type']}: {heading['text']}",
+                metadata={"source": url, "type": "heading"}
             )
             documents.append(doc)
+        
+        # Process paragraphs
+        for paragraph in page.get("paragraphs", []):
+            doc = Document(
+                page_content=paragraph,
+                metadata={"source": url, "type": "paragraph"}
+            )
+            documents.append(doc)
+        
+        # Process list items
+        for item in page.get("list_items", []):
+            doc = Document(
+                page_content=item,
+                metadata={"source": url, "type": "list_item"}
+            )
+            documents.append(doc)
+        
+        # Process tables
+        for table in page.get("tables", []):
+            table_text = ""
+            if table.get("headers"):
+                table_text += "Headers: " + " | ".join(table["headers"]) + "\n"
+            for row in table.get("rows", []):
+                table_text += "Row: " + " | ".join(row) + "\n"
+            
+            if table_text:
+                doc = Document(
+                    page_content=table_text,
+                    metadata={"source": url, "type": "table"}
+                )
+                documents.append(doc)
     
     logger.info(f"Extracted {len(documents)} documents with source metadata")
     return documents
@@ -175,8 +178,12 @@ def create_vectorstore(chunked_docs: List[Document], embeddings: VertexAIEmbeddi
         os.makedirs(persist_directory, exist_ok=True)
         
         # Create and persist the vector store
+        docs = [
+            Document(page_content=chunk.page_content, metadata={"source": chunk.metadata["source"]})
+            for chunk in chunked_docs
+        ]
         vectorstore = Chroma.from_documents(
-            documents=chunked_docs,
+            docs,
             embedding=embeddings,
             persist_directory=persist_directory
         )
