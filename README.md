@@ -33,7 +33,7 @@ An intelligent chatbot that helps users find recipes and information from the Ma
 
 1. **Clone the Repository**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/palakdesai4501/AI-Based-Chatbot.git
    cd ChatBot
    ```
 
