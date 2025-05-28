@@ -93,12 +93,17 @@ ChatBot/
 ├── main.py              # FastAPI application
 ├── requirements.txt     # Python dependencies
 ├── .env                # Environment variables
+├── .env-example        # Environment variables template
+├── .gitignore         # Git ignore rules
 ├── scraper/            # Web scraping scripts
 ├── rag/               # RAG implementation
 │   ├── embed_data.py  # Vector store creation
 │   └── nestle_vectordb/ # Vector database
-└── graph/             # Neo4j graph implementation
-    └── graphrag.py    # Graph database operations
+├── graph/             # Neo4j graph implementation
+│   └── graphrag.py    # Graph database operations
+└── frontend/          # Frontend implementation
+    ├── index.html     # Main HTML file
+    └── assets/        # Frontend assets
 ```
 
 ## API Endpoints
