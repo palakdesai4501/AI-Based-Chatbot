@@ -10,6 +10,8 @@ from neo4j import GraphDatabase
 from typing import List, Dict, Any
 import re
 from fastapi.middleware.cors import CORSMiddleware
+from langchain.prompts import PromptTemplate
+from langchain.chains import RetrievalQA
 
 # Load .env variables 
 load_dotenv()
@@ -177,48 +179,68 @@ def extract_entity_from_question(question: str) -> str:
     # fallback: return the whole question
     return question.strip()
 
+# 1) Load LLM
+llm = ChatOpenAI(
+    temperature=0,
+    model_name="gpt-3.5-turbo",
+    openai_api_key=api_key,
+)
+
+# 2) Build your retriever
+retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+
+# 3) Write a system+human prompt that asks for citations
+template = """
+System:
+You are Smartie, the MadeWithNestlé assistant. Use ONLY the facts in the Context
+and include citations like [1], [2] pointing to the source URL.
+
+Context:
+{context}
+
+User:
+{question}
+
+Assistant:"""
+
+prompt = PromptTemplate(
+    input_variables=["context", "question"],
+    template=template
+)
+
+# 4) Tie it together with RetrievalQA
+qa = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="stuff",
+    retriever=retriever,
+    return_source_documents=True,
+    chain_type_kwargs={"prompt": prompt},
+)
+
 @app.post("/ask")
 async def ask_question(req: AskRequest):
     try:
         logger.info(f"Received question: {req.question}")
-        # Step 1: Get vector store context
+
+        # 1. Get vector context (top-k docs)
         vector_docs = vectorstore.similarity_search(req.question, k=5)
-        vector_context = "\n".join([doc.page_content for doc in vector_docs]) if vector_docs else ""
-        logger.info(f"Vector store context found: {bool(vector_context)}")
-        # Step 2: Extract entity from question
+        docs_context = "\n\n".join([doc.page_content for doc in vector_docs])
+
+        # 2. Get graph context (plain-English bullet points)
         entity = extract_entity_from_question(req.question)
-        logger.info(f"Entity extracted for graph search: {entity}")
-        # Step 3: Get graph database context
         graph_results = query_graph_database(entity)
         graph_context = format_graph_context(graph_results)
-        logger.info(f"Graph context found: {bool(graph_context)}")
-        # Step 4: Combine contexts
-        combined_context = ""
-        if vector_context:
-            combined_context += "Text-based information:\n" + vector_context + "\n\n"
-        if graph_context:
-            combined_context += "Graph-based information:\n" + graph_context
-        if not combined_context:
-            logger.info("No relevant information found in either context.")
-            return {"answer": "Sorry, I couldn't find any relevant information."}
-        # If OpenAI client is available, try to use it
-        if openai_model and api_key and len(api_key) > 20:
-            try:
-                # Step 5: Prepare prompt
-                prompt = f"""
-You are a helpful assistant that answers questions based on Nestlé's content.\nUse only the context provided below to answer.\nThe context comes from two sources:\n1. Text-based information from Nestlé's content\n2. Graph-based information showing relationships between recipes, ingredients, and categories\n\nContext:\n{combined_context}\n\nQuestion:\n{req.question}\n"""
-                # Step 6: Get GPT answer
-                response = openai_model.predict(prompt)
-                logger.info("OpenAI model used for answer.")
-                return {"answer": response.strip()}
-            except Exception as openai_error:
-                logger.warning(f"OpenAI error: {openai_error}. Using mock response.")
-                mock_answer = get_mock_response(req.question, combined_context)
-                return {"answer": mock_answer}
-        else:
-            logger.warning("OpenAI client not available. Using mock response.")
-            mock_answer = get_mock_response(req.question, combined_context)
-            return {"answer": mock_answer}
+
+        # 3. Combine both contexts
+        full_context = f"Graph Knowledge:\n{graph_context}\n\n{docs_context}"
+
+        # 4. Use RetrievalQA with custom context
+        result = qa({"query": req.question, "context": full_context})
+        answer = result["result"]
+        docs = result["source_documents"]
+        sources = [d.metadata.get("source", "") for d in docs]
+
+        return {"answer": answer, "sources": sources}
     except Exception as e:
         logger.error(f"Error in /ask: {e}")
         return {"error": str(e)}
