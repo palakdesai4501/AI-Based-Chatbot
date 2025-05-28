@@ -108,69 +108,71 @@ class Neo4jGraphBuilder:
                 return
                 
             with open(data_file, 'r') as f:
-                data = json.load(f)
-            logger.info(f"Data file loaded. Keys: {list(data.keys())}")
+                pages = json.load(f)
+            logger.info(f"Data file loaded. Found {len(pages)} pages")
 
-            # Extract entities
-            logger.info("Extracting entities from data...")
-            entities = self.extract_entities(data)
+            # Process each page
+            for page in pages:
+                # Extract entities from this page
+                logger.info(f"Extracting entities from page: {page.get('url', 'unknown')}")
+                entities = self.extract_entities(page)
 
-            # Create nodes and relationships
-            with self.driver.session() as session:
-                # Create recipes
-                logger.info("Creating recipe nodes...")
-                for recipe in entities['recipes']:
-                    session.run(
-                        "MERGE (r:Recipe {name: $name})",
-                        name=recipe
-                    )
-                logger.info(f"Created {len(entities['recipes'])} recipe nodes")
-
-                # Create categories
-                logger.info("Creating category nodes...")
-                for category in entities['categories']:
-                    session.run(
-                        "MERGE (c:Category {name: $name})",
-                        name=category
-                    )
-                logger.info(f"Created {len(entities['categories'])} category nodes")
-
-                # Create ingredients and relationships
-                logger.info("Creating ingredient nodes...")
-                for ingredient in entities['ingredients']:
-                    session.run(
-                        "MERGE (i:Ingredient {name: $name})",
-                        name=ingredient
-                    )
-                logger.info(f"Created {len(entities['ingredients'])} ingredient nodes")
-
-                # Create relationships between recipes and ingredients
-                logger.info("Creating recipe-ingredient relationships...")
-                for recipe in entities['recipes']:
-                    for ingredient in entities['ingredients']:
+                # Create nodes and relationships
+                with self.driver.session() as session:
+                    # Create recipes
+                    logger.info("Creating recipe nodes...")
+                    for recipe in entities['recipes']:
                         session.run(
-                            """
-                            MATCH (r:Recipe {name: $recipe})
-                            MATCH (i:Ingredient {name: $ingredient})
-                            MERGE (r)-[:HAS_INGREDIENT]->(i)
-                            """,
-                            recipe=recipe,
-                            ingredient=ingredient
+                            "MERGE (r:Recipe {name: $name})",
+                            name=recipe
                         )
+                    logger.info(f"Created {len(entities['recipes'])} recipe nodes")
 
-                # Create relationships between recipes and categories
-                logger.info("Creating recipe-category relationships...")
-                for recipe in entities['recipes']:
+                    # Create categories
+                    logger.info("Creating category nodes...")
                     for category in entities['categories']:
                         session.run(
-                            """
-                            MATCH (r:Recipe {name: $recipe})
-                            MATCH (c:Category {name: $category})
-                            MERGE (r)-[:BELONGS_TO_CATEGORY]->(c)
-                            """,
-                            recipe=recipe,
-                            category=category
+                            "MERGE (c:Category {name: $name})",
+                            name=category
                         )
+                    logger.info(f"Created {len(entities['categories'])} category nodes")
+
+                    # Create ingredients and relationships
+                    logger.info("Creating ingredient nodes...")
+                    for ingredient in entities['ingredients']:
+                        session.run(
+                            "MERGE (i:Ingredient {name: $name})",
+                            name=ingredient
+                        )
+                    logger.info(f"Created {len(entities['ingredients'])} ingredient nodes")
+
+                    # Create relationships between recipes and ingredients
+                    logger.info("Creating recipe-ingredient relationships...")
+                    for recipe in entities['recipes']:
+                        for ingredient in entities['ingredients']:
+                            session.run(
+                                """
+                                MATCH (r:Recipe {name: $recipe})
+                                MATCH (i:Ingredient {name: $ingredient})
+                                MERGE (r)-[:HAS_INGREDIENT]->(i)
+                                """,
+                                recipe=recipe,
+                                ingredient=ingredient
+                            )
+
+                    # Create relationships between recipes and categories
+                    logger.info("Creating recipe-category relationships...")
+                    for recipe in entities['recipes']:
+                        for category in entities['categories']:
+                            session.run(
+                                """
+                                MATCH (r:Recipe {name: $recipe})
+                                MATCH (c:Category {name: $category})
+                                MERGE (r)-[:BELONGS_TO_CATEGORY]->(c)
+                                """,
+                                recipe=recipe,
+                                category=category
+                            )
 
             logger.info("Graph creation completed successfully")
 
