@@ -71,12 +71,24 @@ An intelligent chatbot that helps users find recipes and information from the Ma
    - Create service account and download credentials
    - Set the path in GOOGLE_APPLICATION_CREDENTIALS
 
-7. **Run the Application**
+7. **Run Data Collection and Processing**
+   ```bash
+   # Run the scraper to collect data from Made with Nestlé website
+   python scraper/scrape_nestle.py
+   
+   # Process and embed the collected data
+   python rag/embed_data.py
+   
+   # Create the graph database
+   python graph/graphrag.py
+   ```
+
+8. **Run the Application**
    ```bash
    uvicorn main:app --reload --port 8001
    ```
 
-8. **Test the API**
+9. **Test the API**
    - Import the provided Postman collection
    - Test the chatbot endpoint: POST http://localhost:8001/ask
    - Example request body:
